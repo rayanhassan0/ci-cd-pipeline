@@ -1,0 +1,38 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.10'
+
+- script: |
+    make install
+  displayName: 'Install dependencies'
+
+- script: |
+    make lint
+  displayName: 'Lint'
+
+- script: |
+    make test
+  displayName: 'Test'
+
+- task: ArchiveFiles@2
+  displayName: 'Archive app'
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+    replaceExistingArchive: true
+
+- task: AzureWebApp@1
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    azureSubscription: 'AZURE_SP_CONNECTION'   # بننشئها بعد شوي في Azure DevOps
+    appName: 'rayan-ci-cd-app-we'              # هذا اسم الـ Web App اللي أنشأناه
+    package: '$(Build.ArtifactStagingDirectory)/app.zip'
