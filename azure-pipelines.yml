@@ -1,30 +1,42 @@
 trigger:
 - main
 
-# Use your self-hosted agent (Default pool)
 pool:
-  name: Default
+  name: Default   # self-hosted agent pool where RAYAN is online
 
 steps:
-# Ensure Python 3.10 is available on the agent (no-op if already installed)
+# استخدم بايثون 3.10 (إن كان متوفر على الوكيل)
 - task: UsePythonVersion@0
   displayName: "Set Python 3.10"
   inputs:
     versionSpec: '3.10'
 
-- script: |
-    make install
+# ========== Install ==========
+- task: PowerShell@2
   displayName: "Install dependencies"
+  inputs:
+    targetType: 'inline'
+    script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
 
-- script: |
-    make lint
+# ========== Lint ==========
+- task: PowerShell@2
   displayName: "Lint"
+  inputs:
+    targetType: 'inline'
+    script: |
+      python -m pylint --disable=R,C hello.py
 
-- script: |
-    make test
+# ========== Test ==========
+- task: PowerShell@2
   displayName: "Test"
+  inputs:
+    targetType: 'inline'
+    script: |
+      python -m pytest -vv test_hello.py
 
-# Archive workspace for deployment
+# ========== Archive (zip) ==========
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
@@ -34,11 +46,11 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# Deploy to Azure Web App (uses the service connection you created)
+# ========== Deploy ==========
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'   # service connection name
-    appName: 'rayan-ci-cd-app-we'              # your App Service name
+    azureSubscription: 'AZURE_SP_CONNECTION'
+    appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
 
