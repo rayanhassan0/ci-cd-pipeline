@@ -1,38 +1,44 @@
 trigger:
 - main
 
+# Use your self-hosted agent (Default pool)
 pool:
-  vmImage: ubuntu-latest
+  name: Default
 
 steps:
+# Ensure Python 3.10 is available on the agent (no-op if already installed)
 - task: UsePythonVersion@0
+  displayName: "Set Python 3.10"
   inputs:
     versionSpec: '3.10'
 
 - script: |
     make install
-  displayName: 'Install dependencies'
+  displayName: "Install dependencies"
 
 - script: |
     make lint
-  displayName: 'Lint'
+  displayName: "Lint"
 
 - script: |
     make test
-  displayName: 'Test'
+  displayName: "Test"
 
+# Archive workspace for deployment
 - task: ArchiveFiles@2
-  displayName: 'Archive app'
+  displayName: "Archive app"
   inputs:
     rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
     includeRootFolder: false
-    archiveType: 'zip'
+    archiveType: zip
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
+# Deploy to Azure Web App (uses the service connection you created)
 - task: AzureWebApp@1
-  displayName: 'Deploy to Azure Web App'
+  displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'   # بننشئها بعد شوي في Azure DevOps
-    appName: 'rayan-ci-cd-app-we'              # هذا اسم الـ Web App اللي أنشأناه
+    azureSubscription: 'AZURE_SP_CONNECTION'   # service connection name
+    appName: 'rayan-ci-cd-app-we'              # your App Service name
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
+
