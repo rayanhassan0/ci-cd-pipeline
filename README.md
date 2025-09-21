@@ -1,28 +1,27 @@
 # CI/CD Pipeline Project
+[![CI](https://github.com/rayanhassan0/ci-cd-pipeline/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/rayanhassan0/ci-cd-pipeline/actions/workflows/python-app.yml)
 
-This project demonstrates a complete CI/CD pipeline using GitHub Actions,Azure Pipelines, and Azure App Service.
+This project demonstrates a complete CI/CD pipeline using **GitHub Actions**, **Azure Pipelines**, and **Azure App Service**.
 
 ---
 
 ## Project Overview
-
 The project applies DevOps best practices:
 
-- Continuous Integration (CI):
-  - Code tested with `pytest.
+- **Continuous Integration (CI):**
+  - Code tested with `pytest`.
   - Code quality checked with `pylint`.
-  - GitHub Actions workflow ensures lint and tests run automatically on each commit.
+  - GitHub Actions workflow runs automatically on each push/PR to enforce lint & tests.
 
-- Continuous Delivery (CD):
+- **Continuous Delivery (CD):**
   - Azure Pipelines build and package the application.
-  - The app is deployed automatically to Azure App Service.
+  - Automatic deployment to Azure App Service.
   - Deployment verified with `curl` and browser access.
 
 ---
 
-# Architectural Diagram
-
-`mermaid
+## Architectural Diagram
+```mermaid
 flowchart LR
     A[GitHub Repo] -->|Push Code| B[GitHub Actions: CI]
     B -->|Build + Lint + Test| C[Azure Pipelines: CD]
