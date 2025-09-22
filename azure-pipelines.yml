@@ -42,7 +42,8 @@ steps:
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
-    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+    # كان: $(System.DefaultWorkingDirectory)
+    rootFolderOrFile: '$(Build.SourcesDirectory)'
     includeRootFolder: false
     archiveType: zip
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
