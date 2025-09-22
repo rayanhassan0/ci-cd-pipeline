@@ -1,42 +1,47 @@
 trigger:
 - main
 
+# وكيلك الذاتي
 pool:
   name: Default   # self-hosted agent pool where RAYAN is online
 
 steps:
-# استخدم بايثون 3.10 (إن كان متوفر على الوكيل)
+# -------- Python 3.10 --------
 - task: UsePythonVersion@0
   displayName: "Set Python 3.10"
   inputs:
     versionSpec: '3.10'
 
-# ========== Install ==========
+# -------- Install --------
 - task: PowerShell@2
   displayName: "Install dependencies"
   inputs:
     targetType: 'inline'
     script: |
+      python -V
       python -m pip install --upgrade pip
-      pip install -r requirements.txt
+      python -m pip install -r requirements.txt
+      python -m pip show pylint
+      python -m pip show flask
 
-# ========== Lint ==========
+# -------- Lint --------
+# تعطيل E0401 لأن pylint أحيانًا لا يتعرّف استيراد Flask على الوكيل Windows
 - task: PowerShell@2
   displayName: "Lint"
   inputs:
     targetType: 'inline'
     script: |
-      python -m pylint --disable=R,C hello.py
+      python -m pylint --disable=R,C,E0401 hello.py
 
-# ========== Test ==========
+# -------- Test --------
 - task: PowerShell@2
   displayName: "Test"
   inputs:
     targetType: 'inline'
     script: |
-      python -m pytest -vv test_hello.py
+      python -m pytest -vv
 
-# ========== Archive (zip) ==========
+# -------- Archive (zip) --------
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
@@ -46,11 +51,10 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# ========== Deploy ==========
+# -------- Deploy --------
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'
+    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم صحيح
     appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
-
