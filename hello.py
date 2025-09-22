@@ -1,22 +1,16 @@
 from flask import Flask, request, jsonify
 
-# ===== دوال مطلوبة للاختبارات =====
-def toyou(name):
-    return f"hi {name}"
+# ===== دوال مطلوبة للاختبارات (وسيط واحد لكل دالة) =====
+def toyou(x):
+    return f"hi {x}"
 
-def add(a, b=None):
-    # يدعم add(a, b) أو add(a) -> a + 1
-    if b is None:
-        return a + 1
-    return a + b
+def add(x):
+    return x + 1
 
-def subtract(a, b=None):
-    # يدعم subtract(a, b) أو subtract(a) -> a - 1
-    if b is None:
-        return a - 1
-    return a - b
+def subtract(x):
+    return x - 1
 
-# ===== تطبيق Flask بسيط لمسار / و /predict =====
+# ===== تطبيق Flask لمسار / و /predict =====
 app = Flask(__name__)
 
 @app.get("/")
@@ -27,7 +21,7 @@ def index():
 def predict():
     payload = request.get_json(silent=True) or {}
     data = payload.get("data", [])
-    total = sum(x for x in data if isinstance(x, (int, float)))
+    total = sum(v for v in data if isinstance(v, (int, float)))
     return jsonify({"sum": total})
 
 if __name__ == "__main__":
