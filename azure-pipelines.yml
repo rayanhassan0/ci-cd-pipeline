@@ -21,8 +21,6 @@ steps:
       python -V
       python -m pip install --upgrade pip
       python -m pip install -r requirements.txt
-      python -m pip show pylint
-      python -m pip show flask
 
 # -------- Lint --------
 # تعطيل E0401 لأن pylint أحيانًا لا يتعرّف استيراد Flask على الوكيل Windows
@@ -41,11 +39,29 @@ steps:
     script: |
       python -m pytest -vv
 
+# -------- Prepare artifact folder (اختياري لتقليل الحجم) --------
+- task: PowerShell@2
+  displayName: "Stage artifact (exclude venv/screenshots/.git)"
+  inputs:
+    targetType: 'inline'
+    script: |
+      Remove-Item -Recurse -Force "$(Build.ArtifactStagingDirectory)" -ErrorAction SilentlyContinue
+      New-Item -ItemType Directory -Path "$(Build.ArtifactStagingDirectory)" | Out-Null
+      $exclude = @(".git", ".venv", "docs\screenshots", ".pytest_cache", "__pycache__", ".github")
+      Get-ChildItem -Path "$(Build.SourcesDirectory)" -Recurse |
+        Where-Object {
+          $p = $_.FullName
+          -not ($exclude | ForEach-Object { $p -like (Join-Path "$(Build.SourcesDirectory)" $_ + "*") })
+        } |
+        Copy-Item -Destination {
+          $_.FullName.Replace("$(Build.SourcesDirectory)", "$(Build.ArtifactStagingDirectory)")
+        } -Force -Recurse
+
 # -------- Archive (zip) --------
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
-    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+    rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
     includeRootFolder: false
     archiveType: zip
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
@@ -55,6 +71,6 @@ steps:
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم صحيح
-    appName: 'rayan-ci-cd-app-we'
+    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق الـ Service Connection عندك
+    appName: 'rayan-ci-cd-app-we'              # اسم الـ App Service
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
