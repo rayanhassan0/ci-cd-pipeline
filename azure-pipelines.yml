@@ -78,38 +78,48 @@ steps:
     deploymentMethod: 'zipDeploy'
     TakeAppOfflineFlag: true
 
-# ===== Fallback عبر CLI إذا فشل التاسك السابق =====
-- task: AzureCLI@2
-  displayName: "Fallback deploy via az webapp deploy (if needed)"
-  condition: failed()
-  inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'
-    scriptType: pscore
-    scriptLocation: inlineScript
-    inlineScript: |
-      az webapp deploy `
-        --resource-group ci-cd-rg-we `
-        --name rayan-ci-cd-app-we `
-        --src-path "$(Build.ArtifactStagingDirectory)\app.zip" `
-        --type zip `
-        --clean true `
-        --restart true
-
-# ===== Verify after deploy =====
+# (اختياري) Warm-up سريع بعد النشر
 - task: PowerShell@2
-  displayName: "Verify live site & /predict"
+  displayName: "Warm-up site"
   inputs:
     targetType: 'inline'
     script: |
-      $home = Invoke-WebRequest -UseBasicParsing "https://rayan-ci-cd-app-we.azurewebsites.net/"
-      if ($home.Content -notmatch 'Sklearn Prediction Home - Continuous Delivery') {
-        Write-Error "Homepage header not found after deploy"
+      try { Invoke-WebRequest -UseBasicParsing "https://rayan-ci-cd-app-we.azurewebsites.net/" | Out-Null } catch {}
+      Start-Sleep -Seconds 10
+
+# ===== Verify after deploy (with retries) =====
+- task: PowerShell@2
+  displayName: "Verify live site & /predict (with retries)"
+  inputs:
+    targetType: 'inline'
+    script: |
+      $max = 24  # يحاول لمدة ~دقيقتين (كل 5 ثواني)
+      $ok = $false
+      for ($i=1; $i -le $max; $i++) {
+        try {
+          $resp = Invoke-WebRequest -UseBasicParsing "https://rayan-ci-cd-app-we.azurewebsites.net/"
+          if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500 -and ($resp.Content -match "Sklearn Prediction Home - Continuous Delivery")) {
+            Write-Host "Homepage OK on attempt $i"
+            $ok = $true; break
+          }
+        } catch {}
+        Start-Sleep -Seconds 5
       }
-      $resp = Invoke-WebRequest -UseBasicParsing -Method POST `
-        -Uri "https://rayan-ci-cd-app-we.azurewebsites.net/predict" `
-        -ContentType "application/json" `
-        -Body '{"data":[1,2,3,4]}'
-      if ($resp.Content -notmatch '"sum"\s*:\s*10') {
-        Write-Error "/predict did not return expected JSON"
+      if (-not $ok) { Write-Error "Homepage not ready or header missing after retries" }
+
+      $body = '{"data":[1,2,3,4]}'
+      $ok2 = $false
+      for ($i=1; $i -le $max; $i++) {
+        try {
+          $p = Invoke-WebRequest -UseBasicParsing -Method POST `
+               -Uri "https://rayan-ci-cd-app-we.azurewebsites.net/predict" `
+               -ContentType "application/json" -Body $body
+          if ($p.StatusCode -ge 200 -and $p.StatusCode -lt 500 -and ($p.Content -match '"sum"\s*:\s*10')) {
+            Write-Host "/predict OK on attempt $i"
+            $ok2 = $true; break
+          }
+        } catch {}
+        Start-Sleep -Seconds 5
       }
+      if (-not $ok2) { Write-Error "/predict did not return expected JSON after retries" }
       Write-Host "Live verify OK ✅"
