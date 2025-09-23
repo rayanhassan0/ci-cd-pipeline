@@ -13,7 +13,15 @@ def subtract(x):
 
 @app.get("/")
 def index():
-    return "App is running"
+    # صفحة توضح أن النشر تم عبر CD
+    return """
+    <html>
+      <body style="font-family: sans-serif;">
+        <h3>Sklearn Prediction Home - Continuous Delivery</h3>
+        <p>App is running via Azure Pipelines → Azure App Service.</p>
+      </body>
+    </html>
+    """
 
 @app.post("/predict")
 def predict():
