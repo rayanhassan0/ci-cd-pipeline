@@ -1,7 +1,6 @@
 trigger:
 - main
 
-# Microsoft-hosted لتفادي مشاكل الشبكة في الـ self-hosted
 pool:
   vmImage: 'windows-latest'
 
@@ -9,17 +8,14 @@ variables:
   system.debug: true
 
 steps:
-# جلب التاريخ كامل
 - checkout: self
   fetchDepth: 0
 
-# ===== Python 3.10 =====
 - task: UsePythonVersion@0
   displayName: "Set Python 3.10"
   inputs:
     versionSpec: '3.10'
 
-# ===== Install =====
 - task: PowerShell@2
   displayName: "Install dependencies"
   inputs:
@@ -29,7 +25,6 @@ steps:
       python -m pip install --upgrade pip
       python -m pip install -r requirements.txt
 
-# ===== Lint =====
 - task: PowerShell@2
   displayName: "Lint"
   inputs:
@@ -37,7 +32,6 @@ steps:
     script: |
       python -m pylint --disable=R,C,E0401 hello.py
 
-# ===== Test =====
 - task: PowerShell@2
   displayName: "Test"
   inputs:
@@ -45,20 +39,17 @@ steps:
     script: |
       python -m pytest -vv
 
-# ===== إثبات أن hello.py فيه العنوان الجديد قبل النشر =====
 - task: PowerShell@2
   displayName: "Show commit & hello.py header"
   inputs:
     targetType: 'inline'
     script: |
       git rev-parse --short HEAD
-      Get-Content "$(Build.SourcesDirectory)\hello.py" -TotalCount 30
       $content = Get-Content "$(Build.SourcesDirectory)\hello.py" -Raw
       if ($content -notmatch 'Sklearn Prediction Home - Continuous Delivery') {
         Write-Error "Expected CD header not found in hello.py"
       }
 
-# ===== Archive (zip) =====
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
@@ -68,17 +59,33 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# ===== Deploy (Zip Deploy صريح + أخذ التطبيق offline لحظة النشر) =====
+# Configure runtime (port/startup) قبل النشر
+- task: AzureCLI@2
+  displayName: "Configure Web App runtime"
+  inputs:
+    azureSubscription: 'AZURE_SP_CONNECTION'
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      az webapp config appsettings set `
+        -g ci-cd-rg-we `
+        -n rayan-ci-cd-app-we `
+        --settings WEBSITES_PORT=8000
+      az webapp config set `
+        -g ci-cd-rg-we `
+        -n rayan-ci-cd-app-we `
+        --startup-file "bash -c 'cd /home/site/wwwroot && python -m pip install -r requirements.txt && gunicorn --bind 0.0.0.0:8000 --timeout 600 hello:app'"
+
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق Service Connection
+    azureSubscription: 'AZURE_SP_CONNECTION'
     appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
     deploymentMethod: 'zipDeploy'
     TakeAppOfflineFlag: true
 
-# (اختياري) Warm-up سريع بعد النشر
+# Warm-up بسيط
 - task: PowerShell@2
   displayName: "Warm-up site"
   inputs:
@@ -87,13 +94,12 @@ steps:
       try { Invoke-WebRequest -UseBasicParsing "https://rayan-ci-cd-app-we.azurewebsites.net/" | Out-Null } catch {}
       Start-Sleep -Seconds 10
 
-# ===== Verify after deploy (with retries) =====
 - task: PowerShell@2
   displayName: "Verify live site & /predict (with retries)"
   inputs:
     targetType: 'inline'
     script: |
-      $max = 24  # يحاول لمدة ~دقيقتين (كل 5 ثواني)
+      $max = 36
       $ok = $false
       for ($i=1; $i -le $max; $i++) {
         try {
