@@ -2,16 +2,23 @@ trigger:
 - main
 
 pool:
-  name: Default   # self-hosted agent pool where RAYAN is online
+  name: Default   # self-hosted agent RAYAN
 
+variables:
+  system.debug: true
+
+# تأكد نجيب التاريخ كامل
 steps:
-# -------- Python 3.10 --------
+- checkout: self
+  fetchDepth: 0
+
+# ===== Python 3.10 =====
 - task: UsePythonVersion@0
   displayName: "Set Python 3.10"
   inputs:
     versionSpec: '3.10'
 
-# -------- Install --------
+# ===== Install =====
 - task: PowerShell@2
   displayName: "Install dependencies"
   inputs:
@@ -21,16 +28,16 @@ steps:
       python -m pip install --upgrade pip
       python -m pip install -r requirements.txt
 
-# -------- Lint --------
+# ===== Lint =====
 - task: PowerShell@2
   displayName: "Lint"
   inputs:
     targetType: 'inline'
     script: |
-      # تعطيل E0401 لأن pylint أحيانًا لا يتعرّف Flask على الوكيل Windows
+      # تعطيل E0401 لأن pylint أحيانًا ما يتعرّف Flask على الوكيل Windows
       python -m pylint --disable=R,C,E0401 hello.py
 
-# -------- Test --------
+# ===== Test =====
 - task: PowerShell@2
   displayName: "Test"
   inputs:
@@ -38,21 +45,52 @@ steps:
     script: |
       python -m pytest -vv
 
-# -------- Archive (zip) --------
+# ===== إثبات أن hello.py فيه العنوان الجديد قبل الأرشفة =====
+- task: PowerShell@2
+  displayName: "Show commit & hello.py header"
+  inputs:
+    targetType: 'inline'
+    script: |
+      git rev-parse --short HEAD
+      # اطبع أول 30 سطر من الملف
+      Get-Content "$(Build.SourcesDirectory)\hello.py" -TotalCount 30
+      # افشل لو ما لقينا الهيدر المطلوب (إثبات CD)
+      $content = Get-Content "$(Build.SourcesDirectory)\hello.py" -Raw
+      if ($content -notmatch 'Sklearn Prediction Home - Continuous Delivery') {
+        Write-Error "Expected CD header not found in hello.py"
+      }
+
+# ===== Archive (zip) =====
 - task: ArchiveFiles@2
   displayName: "Archive app"
   inputs:
-    # كان: $(System.DefaultWorkingDirectory)
     rootFolderOrFile: '$(Build.SourcesDirectory)'
     includeRootFolder: false
     archiveType: zip
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# -------- Deploy --------
+# ===== Deploy (أساسي) =====
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق الـ Service Connection عندك
+    azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق Service Connection
     appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
+
+# ===== Deploy Fallback عبر CLI (لو صار drop أثناء AzureWebApp@1) =====
+- task: AzureCLI@2
+  displayName: "Fallback deploy via az webapp deploy (if needed)"
+  condition: failed()    # ما ينفّذ إلا إذا فشل التاسك السابق
+  inputs:
+    azureSubscription: 'AZURE_SP_CONNECTION'
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      az webapp deploy `
+        --resource-group ci-cd-rg-we `
+        --name rayan-ci-cd-app-we `
+        --src-path "$(Build.ArtifactStagingDirectory)\app.zip" `
+        --type zip `
+        --clean true `
+        --restart true
