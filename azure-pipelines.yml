@@ -1,7 +1,7 @@
 trigger:
 - main
 
-# استخدم Microsoft-hosted مؤقتًا لتمرير المراجعة
+# Microsoft-hosted لتفادي مشاكل الشبكة في الـ self-hosted
 pool:
   vmImage: 'windows-latest'
 
@@ -45,7 +45,7 @@ steps:
     script: |
       python -m pytest -vv
 
-# ===== إثبات أن hello.py فيه العنوان الجديد =====
+# ===== إثبات أن hello.py فيه العنوان الجديد قبل النشر =====
 - task: PowerShell@2
   displayName: "Show commit & hello.py header"
   inputs:
@@ -68,10 +68,48 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# ===== Deploy =====
+# ===== Deploy (Zip Deploy صريح + أخذ التطبيق offline لحظة النشر) =====
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
     azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق Service Connection
     appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
+    deploymentMethod: 'zipDeploy'
+    TakeAppOfflineFlag: true
+
+# ===== Fallback عبر CLI إذا فشل التاسك السابق =====
+- task: AzureCLI@2
+  displayName: "Fallback deploy via az webapp deploy (if needed)"
+  condition: failed()
+  inputs:
+    azureSubscription: 'AZURE_SP_CONNECTION'
+    scriptType: pscore
+    scriptLocation: inlineScript
+    inlineScript: |
+      az webapp deploy `
+        --resource-group ci-cd-rg-we `
+        --name rayan-ci-cd-app-we `
+        --src-path "$(Build.ArtifactStagingDirectory)\app.zip" `
+        --type zip `
+        --clean true `
+        --restart true
+
+# ===== Verify after deploy =====
+- task: PowerShell@2
+  displayName: "Verify live site & /predict"
+  inputs:
+    targetType: 'inline'
+    script: |
+      $home = Invoke-WebRequest -UseBasicParsing "https://rayan-ci-cd-app-we.azurewebsites.net/"
+      if ($home.Content -notmatch 'Sklearn Prediction Home - Continuous Delivery') {
+        Write-Error "Homepage header not found after deploy"
+      }
+      $resp = Invoke-WebRequest -UseBasicParsing -Method POST `
+        -Uri "https://rayan-ci-cd-app-we.azurewebsites.net/predict" `
+        -ContentType "application/json" `
+        -Body '{"data":[1,2,3,4]}'
+      if ($resp.Content -notmatch '"sum"\s*:\s*10') {
+        Write-Error "/predict did not return expected JSON"
+      }
+      Write-Host "Live verify OK ✅"
