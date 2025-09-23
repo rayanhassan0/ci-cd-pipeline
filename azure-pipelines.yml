@@ -1,14 +1,15 @@
 trigger:
 - main
 
+# استخدم Microsoft-hosted مؤقتًا لتمرير المراجعة
 pool:
-  name: Default   # self-hosted agent RAYAN
+  vmImage: 'windows-latest'
 
 variables:
   system.debug: true
 
-# تأكد نجيب التاريخ كامل
 steps:
+# جلب التاريخ كامل
 - checkout: self
   fetchDepth: 0
 
@@ -34,7 +35,6 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      # تعطيل E0401 لأن pylint أحيانًا ما يتعرّف Flask على الوكيل Windows
       python -m pylint --disable=R,C,E0401 hello.py
 
 # ===== Test =====
@@ -45,16 +45,14 @@ steps:
     script: |
       python -m pytest -vv
 
-# ===== إثبات أن hello.py فيه العنوان الجديد قبل الأرشفة =====
+# ===== إثبات أن hello.py فيه العنوان الجديد =====
 - task: PowerShell@2
   displayName: "Show commit & hello.py header"
   inputs:
     targetType: 'inline'
     script: |
       git rev-parse --short HEAD
-      # اطبع أول 30 سطر من الملف
       Get-Content "$(Build.SourcesDirectory)\hello.py" -TotalCount 30
-      # افشل لو ما لقينا الهيدر المطلوب (إثبات CD)
       $content = Get-Content "$(Build.SourcesDirectory)\hello.py" -Raw
       if ($content -notmatch 'Sklearn Prediction Home - Continuous Delivery') {
         Write-Error "Expected CD header not found in hello.py"
@@ -70,27 +68,10 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
     replaceExistingArchive: true
 
-# ===== Deploy (أساسي) =====
+# ===== Deploy =====
 - task: AzureWebApp@1
   displayName: "Deploy to Azure Web App"
   inputs:
     azureSubscription: 'AZURE_SP_CONNECTION'   # تأكد الاسم يطابق Service Connection
     appName: 'rayan-ci-cd-app-we'
     package: '$(Build.ArtifactStagingDirectory)/app.zip'
-
-# ===== Deploy Fallback عبر CLI (لو صار drop أثناء AzureWebApp@1) =====
-- task: AzureCLI@2
-  displayName: "Fallback deploy via az webapp deploy (if needed)"
-  condition: failed()    # ما ينفّذ إلا إذا فشل التاسك السابق
-  inputs:
-    azureSubscription: 'AZURE_SP_CONNECTION'
-    scriptType: pscore
-    scriptLocation: inlineScript
-    inlineScript: |
-      az webapp deploy `
-        --resource-group ci-cd-rg-we `
-        --name rayan-ci-cd-app-we `
-        --src-path "$(Build.ArtifactStagingDirectory)\app.zip" `
-        --type zip `
-        --clean true `
-        --restart true
