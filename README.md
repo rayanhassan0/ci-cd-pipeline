@@ -44,3 +44,19 @@ make all
 python hello.py
 # افتح المتصفح على: http://127.0.0.1:8000/
 ```
+## API Endpoints (Production on Azure)
+
+**Health (GET `/`)**
+```bash
+APP="rayan-ci-cd-app-we"
+curl -i "https://$APP.azurewebsites.net/"
+```
+
+## Predict (POST /predict)
+```bash
+APP="rayan-ci-cd-app-we"
+curl -i -X POST "https://$APP.azurewebsites.net/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"data":[1,2,3,4]}'
+# => {"sum":10}
+```
