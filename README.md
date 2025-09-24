@@ -60,3 +60,38 @@ curl -i -X POST "https://$APP.azurewebsites.net/predict" \
   -d '{"data":[1,2,3,4]}'
 # => {"sum":10}
 ```
+---
+
+## Screenshots / Evidence
+
+> لقطات تثبت كل الخطوات من البداية للنهاية.
+
+**Resource Group & App Service**
+![Resource Group](images/resource-group-overview.png)
+![App Service Running](images/app-service-running.png)
+
+**Local / Cloud Shell CI checks**
+![make all](images/make-all.png)
+![pytest run](images/pytest-run.png)
+
+**Git & CI**
+![git clone](images/git-clone.png)
+![GitHub Actions Success](images/github-actions-success.png)
+![Badge in README](images/badge.png)
+
+**CD on Azure Pipelines**
+![Continuous Delivery Diagram](images/continuous-delivery.png)
+![Pipeline Deploy Success](images/pipeline-deploy-success.png)
+![Azure Pipeline Success](images/azure-pipeline-success.png)
+
+**Prediction JSON**
+![Predict JSON](images/predict-json.png)
+
+---
+
+## Project Management
+
+- **Trello Board:** <https://trello.com/invite/b/68bdf6f0d4f3624dcd1caa4f/ATTI793a346e5d601a2e966a8a1683ede3bcC5C83614/ci-cd-pipeline-project>  
+- **Spreadsheet:** <https://docs.google.com/spreadsheets/d/195USB3uK46NjKlYLbJAeFR8yt1A4te37/edit?usp=sharing&ouid=107624253403469308209&rtpof=true&sd=true>  
+- **Demo Video (YouTube):** <https://www.youtube.com/watch?v=kM8p1gKolWk>
+
