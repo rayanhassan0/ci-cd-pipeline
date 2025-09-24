@@ -93,5 +93,5 @@ curl -i -X POST "https://$APP.azurewebsites.net/predict" \
 
 - **Trello Board:** <https://trello.com/invite/b/68bdf6f0d4f3624dcd1caa4f/ATTI793a346e5d601a2e966a8a1683ede3bcC5C83614/ci-cd-pipeline-project>  
 - **Spreadsheet:** <https://docs.google.com/spreadsheets/d/195USB3uK46NjKlYLbJAeFR8yt1A4te37/edit?usp=sharing&ouid=107624253403469308209&rtpof=true&sd=true>  
-- **Demo Video (YouTube):** <https://www.youtube.com/watch?v=kM8p1gKolWk>
+- **Demo Video (YouTube):** <https://www.youtube.com/watch?v=jJ1rTz5UgLw>
 
