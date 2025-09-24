@@ -3,16 +3,16 @@
 
 This project demonstrates a complete CI/CD pipeline using **GitHub Actions** (CI), **Azure Pipelines** (CD), and **Azure App Service** (runtime).
 
-- **App tech:** Python + Flask + Gunicorn  
-- **Endpoints:** `/` (health text), `/predict` (JSON: sum of numbers)  
-- **Deployed App:** `https://rayan-ci-cd-app-we.azurewebsites.net`
+- **Tech:** Python + Flask + Gunicorn  
+- **Endpoints:** `/` (health), `/predict` (JSON sum)  
+- **Live App:** https://rayan-ci-cd-app-we.azurewebsites.net
 
 ---
 
 ## Project Overview
-- **CI:** On each push/PR to `main`, GitHub Actions installs deps, runs **pylint** and **pytest**.
+- **CI:** On each push/PR to `main`, GitHub Actions installs deps then runs **pylint** and **pytest**.
 - **CD:** Azure Pipelines builds/archives the app and deploys to **Azure Web App** automatically.
-- **Verification:** `curl` + browser check after deploy.
+- **Verification:** `curl` + browser after deployment.
 
 ---
 
@@ -23,42 +23,24 @@ flowchart LR
   B -->|Build + Lint + Test| C[Azure Pipelines: CD]
   C -->|Deploy App| D[Azure App Service]
   D -->|Access| E[Browser / curl]
-  ```
+  ``` 
+  ---
 
+## How to Run (Locally / Cloud Shell)
 
-Project Management
-
-Trello Board: CI/CD Pipeline Project Trello Board
-
-Spreadsheet: ci_cd_tasks.xlsx
-
-Demo Video: YouTube Screencast
-
-How to Run (Locally / Cloud Shell)
-1) Clone
+```bash
+# 1) Clone
 git clone https://github.com/rayanhassan0/ci-cd-pipeline.git
 cd ci-cd-pipeline
 
-2) Lint & Tests (one-shot)
+# 2) Lint & Tests (one-shot)
 make all
-# or run step-by-step:
+# أو يدويًا:
 # python -m pip install -r requirements.txt
 # python -m pylint --disable=R,C hello.py
 # python -m pytest -vv
 
-3) Run locally (optional)
-# dev only
+# 3) تشغيل محلي (اختياري)
 python hello.py
-# open http://127.0.0.1:8000/
-
-API Endpoints (Production on Azure)
-Health (GET /)
-APP="rayan-ci-cd-app-we"
-curl -i "https://$APP.azurewebsites.net/"
-
-Predict (POST /predict)
-APP="rayan-ci-cd-app-we"
-curl -i -X POST "https://$APP.azurewebsites.net/predict" \
-  -H "Content-Type: application/json" \
-  -d '{"data":[1,2,3,4]}'
-# -> {"sum":10}
+# افتح المتصفح على: http://127.0.0.1:8000/
+```
