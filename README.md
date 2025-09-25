@@ -92,6 +92,22 @@ curl -i -X POST "https://$APP.azurewebsites.net/predict" \
 ## Project Management
 
 - **Trello Board:** <https://trello.com/invite/b/68bdf6f0d4f3624dcd1caa4f/ATTI793a346e5d601a2e966a8a1683ede3bcC5C83614/ci-cd-pipeline-project>  
-- **Spreadsheet:** <https://docs.google.com/spreadsheets/d/195USB3uK46NjKlYLbJAeFR8yt1A4te37/edit?usp=sharing&ouid=107624253403469308209&rtpof=true&sd=true>  
+- **Spreadsheet:** <https://docs.google.com/spreadsheets/d/1yVpYghg9A0xNwI7VaEhVfjopEoDdVFKgwb6I5wHW8NU/edit?usp=sharing>  
 - **Demo Video (YouTube):** <https://www.youtube.com/watch?v=jJ1rTz5UgLw>
+
+---
+
+## How to Improve (Future Work)
+
+Increase automated test coverage (unit/integration) and add coverage gate (e.g., ≥80%).
+
+Add security checks (SAST/DAST) and dependency vulnerability scanning in CI.
+
+Introduce blue/green or canary deployments for safer releases.
+
+Add performance/load tests in a separate stage with pass/fail thresholds.
+
+Centralize logs/metrics (e.g., Log Analytics + dashboards + alerting).
+
+Parameterize Terraform & app configs for multi-env (dev/test/stage/prod).
 
